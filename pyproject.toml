@@ -1,0 +1,8 @@
+[project]
+name = "support-agent"
+version = "0.0.0"
+description = "A conversational support agent for a SaaS product"
+requires-python = ">=3.12"
+dependencies = [
+    "dotenv>=0.9.9",
+]
