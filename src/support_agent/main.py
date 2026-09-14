@@ -3,17 +3,17 @@ import os
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
-
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 from pydantic import ValidationError
 
 from support_agent.schemas.response import ResponseSchema
+
+ROOT = Path(__file__).resolve().parents[2]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
 
 
 def get_client() -> genai.Client:
