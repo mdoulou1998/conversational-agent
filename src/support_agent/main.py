@@ -17,6 +17,10 @@ from support_agent.schemas.response import ResponseSchema
 
 
 def get_client() -> genai.Client:
+    """
+    Function to get a Gemini API client using the API key from environment variables.
+    This ensures that the client is only created when app is running, and not at import time.
+    """
     load_dotenv(ROOT / ".env")
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
