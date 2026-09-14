@@ -8,16 +8,18 @@ from google import genai
 from google.genai import types
 from pydantic import ValidationError
 
+ROOT = Path(__file__).resolve().parents[2]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
 from support_agent.schemas.response import ResponseSchema
 from support_agent.tools.actions import issue_refund, reset_password, create_support_ticket
 from support_agent.tools.escalate import escalate_case
 from support_agent.tools.account_lookup import account_lookup
 from support_agent.tools.kb_search import kb_search
 
-ROOT = Path(__file__).resolve().parents[2]
-SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+
 
 TOOLS = {
     "lookup_customer_order": account_lookup,
@@ -94,12 +96,12 @@ def support_agent(
         # Example: if the model says it wants tool usage, execute a tool
         # and append the result back into the conversation.
         # This is the custom equivalent of a LangChain agent loop.
-        tool_result = lookup_customer_order(customer_id)
+        tool_result = account_lookup(customer_id)
         messages.append({"role": "tool", "content": json.dumps(tool_result)})
 
     raise RuntimeError("Agent failed to return valid structured output.")
 
 
 if __name__ == "__main__":
-    result = support_agent("12345", "My order is late and I need help.")
+    result = support_agent("12345", "I need to reset my password.")
     print(result.model_dump())
