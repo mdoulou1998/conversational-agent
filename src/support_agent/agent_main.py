@@ -1,9 +1,15 @@
 from __future__ import annotations
 
-from typing import Any, Protocol
+from dataclasses import dataclass
+from typing import Any, Callable, Protocol
 
+from support_agent.llm.gemini import GeminiClient
 from support_agent.schemas.domain import AgentOutcome, Message, StopReason, ToolCall, ToolResult, ValidationResult
 from support_agent.schemas.session import Session
+from support_agent.tools.account_lookup import account_lookup
+from support_agent.tools.actions import create_support_ticket, issue_refund, reset_password
+from support_agent.tools.escalate import escalate_case
+from support_agent.tools.kb_search import kb_search
 
 
 class LLMClient(Protocol):
@@ -18,6 +24,23 @@ class Tool(Protocol):
 
     def invoke(self, **kwargs: Any) -> ToolResult:
         ...
+
+
+@dataclass
+class FunctionTool:
+    """Adapts a plain stub function in tools/ to the Tool protocol."""
+
+    name: str
+    description: str
+    destructive: bool
+    fn: Callable[..., Any]
+
+    def invoke(self, **kwargs: Any) -> ToolResult:
+        try:
+            result = self.fn(**kwargs)
+        except TypeError as exc:
+            return ToolResult(tool_name=self.name, ok=False, error=str(exc))
+        return ToolResult(tool_name=self.name, ok=True, result=result)
 
 
 class PolicyValidator:
@@ -119,3 +142,57 @@ class AgentLoop:
         if signature in session.repeated_call_guard:
             raise RuntimeError("repeat call guard triggered")
         session.repeated_call_guard.append(signature)
+
+
+TOOLS: dict[str, Tool] = {
+    "lookup_customer_order": FunctionTool(
+        name="lookup_customer_order",
+        description="Looks up a customer's recent orders, subscription, and usage details.",
+        destructive=False,
+        fn=account_lookup,
+    ),
+    "search_kb": FunctionTool(
+        name="search_kb",
+        description="Searches the product knowledge base and returns the top matching chunks.",
+        destructive=False,
+        fn=kb_search,
+    ),
+    "escalate_case": FunctionTool(
+        name="escalate_case",
+        description="Escalates a support case to a human with a reason.",
+        destructive=False,
+        fn=escalate_case,
+    ),
+    "issue_refund": FunctionTool(
+        name="issue_refund",
+        description="Issues a refund for a given order ID and amount.",
+        destructive=True,
+        fn=issue_refund,
+    ),
+    "reset_password": FunctionTool(
+        name="reset_password",
+        description="Initiates a password reset for a customer.",
+        destructive=True,
+        fn=reset_password,
+    ),
+    "create_support_ticket": FunctionTool(
+        name="create_support_ticket",
+        description="Creates a support ticket for a customer with a summary and priority.",
+        destructive=False,
+        fn=create_support_ticket,
+    ),
+}
+
+
+def main() -> None:
+    registry = ToolRegistry(TOOLS)
+    validator = PolicyValidator()
+    llm = GeminiClient()
+    loop = AgentLoop(llm=llm, registry=registry, validator=validator)
+    session = Session(customer_id="12345")
+    outcome = loop.run(session, "I need to reset my password.")
+    print(outcome)
+
+
+if __name__ == "__main__":
+    main()
