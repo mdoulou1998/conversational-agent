@@ -1,5 +1,7 @@
-from pathlib import Path
+import json
+import os
 import sys
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
@@ -7,46 +9,99 @@ if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
 from dotenv import load_dotenv
-from langchain.agents import create_agent
-from langchain_core.messages import HumanMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+from google import genai
+from google.genai import types
+from pydantic import ValidationError
 
 from support_agent.schemas.response import ResponseSchema
 
-load_dotenv(dotenv_path=ROOT / ".env")
+load_dotenv(ROOT / ".env")
 
-llm = ChatGoogleGenerativeAI(model="gemini-3.6-flash")
+client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
 
-agent = create_agent(
-    model=llm,
-    tools=[],
-    system_prompt=(
-        "You are a support agent. Respond to the customer query in a helpful and concise manner. "
-        "Return a structured response that matches the provided schema."
-    ),
-    response_format=ResponseSchema,
-)
+def lookup_customer_order(customer_id: str):
+    return {
+        "customer_id": customer_id,
+        "status": "in_transit",
+        "next_eta": "24-48 hours"
+    }
 
-customer_id = "12345"
-query = "My order is late and I need help."
-
-result = agent.invoke(
-    {
-        "messages": [
-            HumanMessage(
-                content=f"Customer ID: {customer_id}\nCustomer Query: {query}"
-            )
+def search_kb(query: str):
+    return {
+        "articles": [
+            "Customers can track shipments in the order dashboard.",
+            "Late deliveries are usually caused by shipping carrier delays."
         ]
     }
-)
 
-final_message = result["messages"][-1]
-content = final_message.content
-if isinstance(content, list):
-    content = "".join(
-        part.get("text", "") if isinstance(part, dict) else str(part)
-        for part in content
+def escalate_case(customer_id: str, reason: str):
+    return {
+        "case_id": f"ESC-{customer_id}",
+        "status": "opened",
+        "reason": reason
+    }
+
+TOOLS = {
+    "lookup_customer_order": lookup_customer_order,
+    "search_kb": search_kb,
+    "escalate_case": escalate_case,
+}
+
+def call_model(prompt: str):
+    response = client.models.generate_content(
+        model="gemini-3.6-flash",
+        contents=prompt,
+        config=types.GenerateContentConfig(
+            system_instruction=(
+                "You are a support agent for a SaaS product. "
+                "Use tools when needed. "
+                "Return ONLY valid JSON matching the required schema."
+            ),
+            temperature=0,
+            response_mime_type="application/json",
+        ),
     )
+    return response.text
 
-parsed = ResponseSchema.model_validate_json(content)
-print(parsed.model_dump())
+def support_agent(customer_id: str, query: str) -> ResponseSchema:
+    messages = [
+        {
+            "role": "user",
+            "content": f"""
+            Customer ID: {customer_id}
+            Customer query: {query}
+            """
+        }
+    ]
+
+    for _ in range(3):
+        prompt = json.dumps({
+            "messages": messages,
+            "available_tools": list(TOOLS.keys()),
+            "output_schema": ResponseSchema.model_json_schema(),
+        })
+
+        raw = call_model(prompt)
+        try:
+            payload = json.loads(raw)
+            return ResponseSchema.model_validate(payload)
+        except (json.JSONDecodeError, ValidationError):
+            # In a real version, you could inspect the model output and decide
+            # whether to retry or call a tool.
+            # This is where the custom tool loop would live.
+            pass
+
+        # Example: if the model says it wants tool usage, execute a tool
+        # and append the result back into the conversation.
+        # This is the custom equivalent of a LangChain agent loop.
+        tool_result = lookup_customer_order(customer_id)
+        messages.append({
+            "role": "tool",
+            "content": json.dumps(tool_result)
+        })
+
+    raise RuntimeError("Agent failed to return valid structured output.")
+
+if __name__ == "__main__":
+    result = support_agent("12345", "My order is late and I need help.")
+    print(result.model_dump())
