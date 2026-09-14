@@ -15,9 +15,13 @@ from pydantic import ValidationError
 
 from support_agent.schemas.response import ResponseSchema
 
-load_dotenv(ROOT / ".env")
 
-client = genai.Client(api_key=os.environ["GEMINI_API_KEY"])
+def get_client() -> genai.Client:
+    load_dotenv(ROOT / ".env")
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not set. Add it to your environment or .env file.")
+    return genai.Client(api_key=api_key)
 
 def lookup_customer_order(customer_id: str):
     return {
@@ -47,7 +51,8 @@ TOOLS = {
     "escalate_case": escalate_case,
 }
 
-def call_model(prompt: str):
+def call_model(prompt: str, client: genai.Client | None = None) -> str:
+    client = client or get_client()
     response = client.models.generate_content(
         model="gemini-3.6-flash",
         contents=prompt,
@@ -63,7 +68,8 @@ def call_model(prompt: str):
     )
     return response.text
 
-def support_agent(customer_id: str, query: str) -> ResponseSchema:
+def support_agent(customer_id: str, query: str, client: genai.Client | None = None) -> ResponseSchema:
+    client = client or get_client()
     messages = [
         {
             "role": "user",
@@ -81,7 +87,7 @@ def support_agent(customer_id: str, query: str) -> ResponseSchema:
             "output_schema": ResponseSchema.model_json_schema(),
         })
 
-        raw = call_model(prompt)
+        raw = call_model(prompt, client=client)
         try:
             payload = json.loads(raw)
             return ResponseSchema.model_validate(payload)
