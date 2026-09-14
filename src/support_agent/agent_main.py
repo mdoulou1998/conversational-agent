@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
 from typing import Any, Protocol
 
 from support_agent.schemas.domain import AgentOutcome, Message, StopReason, ToolCall, ToolResult, ValidationResult
+from support_agent.schemas.session import Session
 
 
 class LLMClient(Protocol):
@@ -18,24 +18,6 @@ class Tool(Protocol):
 
     def invoke(self, **kwargs: Any) -> ToolResult:
         ...
-
-
-@dataclass
-class Session:
-    messages: list[Message] = field(default_factory=list)
-    customer_id: str | None = None
-    max_steps: int = 6
-    token_budget: int = 2000
-    repeated_call_guard: list[tuple[str, tuple[tuple[str, Any], ...]]] = field(default_factory=list)
-
-    def add_user_message(self, text: str) -> None:
-        self.messages.append(Message(role="user", content=text))
-
-    def add_assistant_message(self, text: str) -> None:
-        self.messages.append(Message(role="assistant", content=text))
-
-    def add_tool_result(self, result: ToolResult) -> None:
-        self.messages.append(Message(role="tool", content=str(result.result or result.error or result.tool_name)))
 
 
 class PolicyValidator:

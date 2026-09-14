@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from typing import Any
 
-from support_agent.schemas.domain import Message
+from support_agent.schemas.domain import Message, ToolResult
 
 
 @dataclass
@@ -11,6 +12,9 @@ class Session:
     Represents a support agent session, maintaining the state of the conversation and customer information."""
     customer_id: str | None = None
     messages: list[Message] = field(default_factory=list)
+    max_steps: int = 6
+    token_budget: int = 2000
+    repeated_call_guard: list[tuple[str, tuple[tuple[str, Any], ...]]] = field(default_factory=list)
 
     def set_customer_id(self, customer_id: str) -> None:
         """
@@ -37,6 +41,12 @@ class Session:
         Adds a tool message to the session. Raises a ValueError if the provided text is empty or only whitespace.
         """
         self.messages.append(Message(role="tool", content=text, name=name))
+
+    def add_tool_result(self, result: ToolResult) -> None:
+        """
+        Adds a tool result to the session as a tool message.
+        """
+        self.add_tool_message(str(result.result or result.error or result.tool_name), name=result.tool_name)
 
     def add_system_message(self, text: str) -> None:
         """
