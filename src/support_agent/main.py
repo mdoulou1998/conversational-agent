@@ -12,13 +12,21 @@ from support_agent.schemas.response import ResponseSchema
 from support_agent.tools.actions import issue_refund, reset_password, create_support_ticket
 from support_agent.tools.escalate import escalate_case
 from support_agent.tools.account_lookup import account_lookup
-from support_agent.tools.kb_search import search_kb
+from support_agent.tools.kb_search import kb_search
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
+TOOLS = {
+    "lookup_customer_order": account_lookup,
+    "search_kb": kb_search,
+    "escalate_case": escalate_case,
+    "issue_refund": issue_refund,
+    "reset_password": reset_password,
+    "create_support_ticket": create_support_ticket,
+}
 
 def get_client() -> genai.Client:
     """
@@ -30,37 +38,6 @@ def get_client() -> genai.Client:
     if not api_key:
         raise RuntimeError("GEMINI_API_KEY is not set. Add it to your environment or .env file.")
     return genai.Client(api_key=api_key)
-
-
-def lookup_customer_order(customer_id: str):
-    return {
-        "customer_id": customer_id,
-        "status": "in_transit",
-        "next_eta": "24-48 hours",
-    }
-
-
-def search_kb(query: str):
-    return {
-        "articles": [
-            "Customers can track shipments in the order dashboard.",
-            "Late deliveries are usually caused by shipping carrier delays.",
-        ]
-    }
-
-
-def escalate_case(customer_id: str, reason: str):
-    return {"case_id": f"ESC-{customer_id}", "status": "opened", "reason": reason}
-
-
-TOOLS = {
-    "lookup_customer_order": lookup_customer_order,
-    "search_kb": search_kb,
-    "escalate_case": escalate_case,
-    "issue_refund": issue_refund,
-    "reset_password": reset_password,
-    "create_support_ticket": create_support_ticket,
-}
 
 
 def call_model(prompt: str, client: genai.Client | None = None) -> str:
