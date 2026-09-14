@@ -1,7 +1,7 @@
 import pytest
 
 from support_agent.schemas.domain import Message
-from support_agent.session import Session
+from support_agent.schemas.session import Session
 
 
 def test_user_message_can_enter() -> None:
