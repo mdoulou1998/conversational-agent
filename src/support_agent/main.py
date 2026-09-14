@@ -9,6 +9,10 @@ from google.genai import types
 from pydantic import ValidationError
 
 from support_agent.schemas.response import ResponseSchema
+from support_agent.tools.actions import issue_refund, reset_password, create_support_ticket
+from support_agent.tools.escalate import escalate_case
+from support_agent.tools.account_lookup import account_lookup
+from support_agent.tools.kb_search import search_kb
 
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src"
@@ -53,6 +57,9 @@ TOOLS = {
     "lookup_customer_order": lookup_customer_order,
     "search_kb": search_kb,
     "escalate_case": escalate_case,
+    "issue_refund": issue_refund,
+    "reset_password": reset_password,
+    "create_support_ticket": create_support_ticket,
 }
 
 
