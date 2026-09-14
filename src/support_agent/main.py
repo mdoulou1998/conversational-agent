@@ -20,7 +20,6 @@ from support_agent.tools.account_lookup import account_lookup
 from support_agent.tools.kb_search import kb_search
 
 
-
 TOOLS = {
     "lookup_customer_order": account_lookup,
     "search_kb": kb_search,
@@ -29,6 +28,7 @@ TOOLS = {
     "reset_password": reset_password,
     "create_support_ticket": create_support_ticket,
 }
+
 
 def get_client() -> genai.Client:
     """
