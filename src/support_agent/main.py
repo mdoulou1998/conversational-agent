@@ -27,33 +27,34 @@ def get_client() -> genai.Client:
         raise RuntimeError("GEMINI_API_KEY is not set. Add it to your environment or .env file.")
     return genai.Client(api_key=api_key)
 
+
 def lookup_customer_order(customer_id: str):
     return {
         "customer_id": customer_id,
         "status": "in_transit",
-        "next_eta": "24-48 hours"
+        "next_eta": "24-48 hours",
     }
+
 
 def search_kb(query: str):
     return {
         "articles": [
             "Customers can track shipments in the order dashboard.",
-            "Late deliveries are usually caused by shipping carrier delays."
+            "Late deliveries are usually caused by shipping carrier delays.",
         ]
     }
 
+
 def escalate_case(customer_id: str, reason: str):
-    return {
-        "case_id": f"ESC-{customer_id}",
-        "status": "opened",
-        "reason": reason
-    }
+    return {"case_id": f"ESC-{customer_id}", "status": "opened", "reason": reason}
+
 
 TOOLS = {
     "lookup_customer_order": lookup_customer_order,
     "search_kb": search_kb,
     "escalate_case": escalate_case,
 }
+
 
 def call_model(prompt: str, client: genai.Client | None = None) -> str:
     client = client or get_client()
@@ -72,7 +73,10 @@ def call_model(prompt: str, client: genai.Client | None = None) -> str:
     )
     return response.text
 
-def support_agent(customer_id: str, query: str, client: genai.Client | None = None) -> ResponseSchema:
+
+def support_agent(
+    customer_id: str, query: str, client: genai.Client | None = None
+) -> ResponseSchema:
     client = client or get_client()
     messages = [
         {
@@ -80,16 +84,18 @@ def support_agent(customer_id: str, query: str, client: genai.Client | None = No
             "content": f"""
             Customer ID: {customer_id}
             Customer query: {query}
-            """
+            """,
         }
     ]
 
     for _ in range(3):
-        prompt = json.dumps({
-            "messages": messages,
-            "available_tools": list(TOOLS.keys()),
-            "output_schema": ResponseSchema.model_json_schema(),
-        })
+        prompt = json.dumps(
+            {
+                "messages": messages,
+                "available_tools": list(TOOLS.keys()),
+                "output_schema": ResponseSchema.model_json_schema(),
+            }
+        )
 
         raw = call_model(prompt, client=client)
         try:
@@ -105,12 +111,10 @@ def support_agent(customer_id: str, query: str, client: genai.Client | None = No
         # and append the result back into the conversation.
         # This is the custom equivalent of a LangChain agent loop.
         tool_result = lookup_customer_order(customer_id)
-        messages.append({
-            "role": "tool",
-            "content": json.dumps(tool_result)
-        })
+        messages.append({"role": "tool", "content": json.dumps(tool_result)})
 
     raise RuntimeError("Agent failed to return valid structured output.")
+
 
 if __name__ == "__main__":
     result = support_agent("12345", "My order is late and I need help.")
