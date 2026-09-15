@@ -4,10 +4,11 @@ version = "0.0.0"
 description = "A conversational support agent for a SaaS product"
 requires-python = ">=3.12"
 dependencies = [
-    "dotenv>=0.9.9",
     "google-genai>=1.40.0",
     "isort>=9.0.1",
+    "mypy>=2.3.1",
     "pydantic>=2.11.7",
     "pytest>=8.4.2",
+    "python-dotenv>=1.2.3",
     "ruff>=0.16.7",
 ]
