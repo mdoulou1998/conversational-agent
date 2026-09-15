@@ -8,12 +8,16 @@ exceptions.
 
 from __future__ import annotations
 
+import logging
+
 from support_agent.config import MAX_STEPS
 from support_agent.domain import AgentOutcome, StopReason, ToolCall
 from support_agent.llm.base import LLMClient
 from support_agent.session import Session
 from support_agent.tools.registry import ToolRegistry
 from support_agent.validate.validation import validate_tool_call
+
+logger = logging.getLogger(__name__)
 
 
 class AgentLoop:
@@ -22,6 +26,7 @@ class AgentLoop:
         self.registry = registry
 
     def run(self, session: Session, user_message: str) -> AgentOutcome:
+        logger.info("loop.start customer_id=%s message=%r", session.customer_id, user_message)
         session.add_user_message(user_message)
 
         for step in range(1, session.max_steps + 1):
@@ -30,14 +35,28 @@ class AgentLoop:
             if decision.tool_call is None:
                 final_message = decision.final_message or ""
                 session.add_assistant_message(final_message)
+                logger.info("loop.resolved step=%d message=%r", step, final_message)
                 return AgentOutcome(
                     stop_reason=StopReason.RESOLVED, final_message=final_message, steps_taken=step
                 )
 
+            logger.info(
+                "loop.decide step=%d tool=%s args=%s",
+                step,
+                decision.tool_call.name,
+                decision.tool_call.arguments,
+            )
             outcome = self._handle_tool_call(session, decision.tool_call, step)
             if outcome is not None:
+                logger.info(
+                    "loop.stop step=%d reason=%s message=%r",
+                    step,
+                    outcome.stop_reason.value,
+                    outcome.final_message,
+                )
                 return outcome
 
+        logger.warning("loop.step_limit steps=%d", MAX_STEPS)
         return AgentOutcome(
             stop_reason=StopReason.STEP_LIMIT,
             final_message="Reached the maximum number of steps without resolving.",
@@ -46,7 +65,11 @@ class AgentLoop:
 
     def _handle_tool_call(self, session: Session, call: ToolCall, step: int) -> AgentOutcome | None:
         validation = validate_tool_call(call, session, self.registry)
+        logger.info("loop.validate step=%d tool=%s valid=%s", step, call.name, validation.valid)
         if not validation.valid:
+            logger.warning(
+                "loop.policy_block step=%d tool=%s reason=%s", step, call.name, validation.reason
+            )
             return AgentOutcome(
                 stop_reason=StopReason.POLICY_BLOCK,
                 final_message=validation.reason or "tool call rejected",
@@ -54,6 +77,7 @@ class AgentLoop:
             )
 
         if self._is_repeat(session, call):
+            logger.warning("loop.repeat_detected step=%d tool=%s", step, call.name)
             return AgentOutcome(
                 stop_reason=StopReason.LOOP_DETECTED,
                 final_message="Detected a repeated tool call with identical arguments; "
@@ -68,6 +92,13 @@ class AgentLoop:
         )
         result = self.registry.execute(validated_call)
         session.add_tool_result(result)
+        logger.info(
+            "loop.execute step=%d tool=%s valid=%s escalated=%s",
+            step,
+            result.tool_name,
+            result.valid,
+            result.escalated,
+        )
 
         if result.escalated:
             return AgentOutcome(
