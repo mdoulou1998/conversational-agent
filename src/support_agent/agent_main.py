@@ -3,14 +3,14 @@ from __future__ import annotations
 from typing import Any, Protocol
 
 from support_agent.llm.gemini import GeminiClient
-from support_agent.schemas.domain import (
+from support_agent.domain import (
     AgentOutcome,
     Message,
     StopReason,
     ToolCall,
     ValidationResult,
 )
-from support_agent.schemas.session import Session
+from support_agent.session import Session
 from support_agent.tools.registry import TOOLS, ToolRegistry
 
 
