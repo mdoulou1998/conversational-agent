@@ -1,0 +1,1 @@
+"""Validate tool call before it is executed by the agent."""
