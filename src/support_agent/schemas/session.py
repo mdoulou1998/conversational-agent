@@ -4,21 +4,25 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from support_agent.schemas.domain import Message, ToolResult
+from support_agent.schemas.config import MAX_STEPS
 
 
 @dataclass
 class Session:
     """
-    Represents a support agent session, maintaining the state of the conversation and customer information."""
+    Represents a support agent session, persists across an entire conversation for a single customer
+
+    """
     customer_id: str | None = None
-    messages: list[Message] = field(default_factory=list)
-    max_steps: int = 6
+    messages: list[Message] = field(default_factory=list) # conversation history
+    max_steps: int = MAX_STEPS
     token_budget: int = 2000
     repeated_call_guard: list[tuple[str, tuple[tuple[str, Any], ...]]] = field(default_factory=list)
 
     def set_customer_id(self, customer_id: str) -> None:
         """
         Sets the customer ID for the session. Raises a ValueError if the provided customer_id is empty or only whitespace.
+        This makes sure that the session is always associated with a valid customer.
         """
         if not customer_id or not customer_id.strip():
             raise ValueError("customer_id cannot be empty")
@@ -47,9 +51,3 @@ class Session:
         Adds a tool result to the session as a tool message.
         """
         self.add_tool_message(str(result.result or result.error or result.tool_name), name=result.tool_name)
-
-    def add_system_message(self, text: str) -> None:
-        """
-        Adds a system message to the session. Raises a ValueError if the provided text is empty or only whitespace.
-        """
-        self.messages.append(Message(role="system", content=text))
