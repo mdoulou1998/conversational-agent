@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from support_agent.schemas.domain import Message, ToolResult
-from support_agent.schemas.config import MAX_STEPS
+from support_agent.domain import Message, ToolResult
+from support_agent.config import MAX_STEPS
 
 
 @dataclass

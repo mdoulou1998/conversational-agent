@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from support_agent.schemas.domain import Message
+from support_agent.domain import Message
 
 _MODEL = "gemini-3.6-flash"
 _ROLE_MAP = {"user": "user", "assistant": "model", "tool": "user", "system": "user"}

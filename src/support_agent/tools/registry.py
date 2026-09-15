@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
-from support_agent.schemas.domain import ToolCall, ToolResult
+from support_agent.domain import ToolCall, ToolResult
 from support_agent.tools.account_lookup import account_lookup
 from support_agent.tools.actions import create_support_ticket, issue_refund, reset_password
 from support_agent.tools.escalate import escalate_case
