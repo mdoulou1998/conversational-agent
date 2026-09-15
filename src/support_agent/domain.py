@@ -12,6 +12,7 @@ class StopReason(str, Enum):
     STEP_LIMIT = "step_limit"
     BUDGET_EXHAUSTED = "budget_exhausted"
     POLICY_BLOCK = "policy_block"
+    LOOP_DETECTED = "loop_detected"
 
 
 @dataclass

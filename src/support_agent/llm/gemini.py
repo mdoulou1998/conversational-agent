@@ -7,7 +7,8 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-from support_agent.domain import Message
+from support_agent.domain import Message, ToolCall
+from support_agent.llm.base import LLMDecision
 
 _MODEL = "gemini-3.6-flash"
 _ROLE_MAP = {"user": "user", "assistant": "model", "tool": "user", "system": "user"}
@@ -20,9 +21,11 @@ class GeminiClient:
         self._client = genai.Client(api_key=api_key or _load_api_key())
         self._model = model
 
-    def complete(self, messages: list[Message], tools: list[dict[str, Any]]) -> dict[str, Any]:
+    def complete(self, messages: list[Message], tools: list[dict[str, Any]]) -> LLMDecision:
         contents = [
-            types.Content(role=_ROLE_MAP[message.role], parts=[types.Part.from_text(text=message.content)])
+            types.Content(
+                role=_ROLE_MAP[message.role], parts=[types.Part.from_text(text=message.content)]
+            )
             for message in messages
         ]
         function_declarations = [
@@ -37,19 +40,25 @@ class GeminiClient:
             model=self._model,
             contents=contents,
             config=types.GenerateContentConfig(
-                tools=[types.Tool(function_declarations=function_declarations)] if function_declarations else None,
+                tools=[types.Tool(function_declarations=function_declarations)]
+                if function_declarations
+                else None,
                 temperature=0,
             ),
         )
         return _to_decision(response)
 
 
-def _to_decision(response: types.GenerateContentResponse) -> dict[str, Any]:
-    candidate = response.candidates[0]
-    for part in candidate.content.parts or []:
-        if part.function_call:
-            return {"tool_name": part.function_call.name, "arguments": dict(part.function_call.args or {})}
-    return {"final_message": response.text or ""}
+def _to_decision(response: types.GenerateContentResponse) -> LLMDecision:
+    candidates = response.candidates or []
+    content = candidates[0].content if candidates else None
+    for part in (content.parts if content else None) or []:
+        if part.function_call and part.function_call.name:
+            call = ToolCall(
+                name=part.function_call.name, arguments=dict(part.function_call.args or {})
+            )
+            return LLMDecision(tool_call=call)
+    return LLMDecision(final_message=response.text or "")
 
 
 def _load_api_key() -> str:
