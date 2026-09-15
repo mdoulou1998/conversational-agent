@@ -6,6 +6,7 @@ from typing import Any, Literal
 
 
 class StopReason(str, Enum):
+    # Enum gives reason for agent stopping, passed to agent outcome. They cover decisions and agent errors.
     RESOLVED = "resolved"
     ESCALATED = "escalated"
     STEP_LIMIT = "step_limit"
@@ -15,12 +16,13 @@ class StopReason(str, Enum):
 
 @dataclass
 class Message:
-    role: Literal["user", "assistant", "tool", "system"]
+    # To be passed into the LLM and create a session transcript. The role is used to determine how the LLM should interpret the message.
+    role: Literal["user", "assistant", "tool"]
     content: str
     name: str | None = None
 
     def __post_init__(self) -> None:
-        valid_roles = {"user", "assistant", "tool", "system"}
+        valid_roles = {"user", "assistant", "tool"}
         if self.role not in valid_roles:
             raise ValueError(f"Invalid message role: {self.role}")
 
@@ -43,8 +45,9 @@ class ToolCall:
 
 @dataclass
 class ToolResult:
+    # This is outcome of the tool call, after validation.
     tool_name: str
-    ok: bool
+    valid: bool
     result: dict[str, Any] | None = None
     error: str | None = None
     is_final: bool = False
@@ -53,13 +56,16 @@ class ToolResult:
 
 @dataclass
 class ValidationResult:
-    ok: bool
+    # Allows a full trace of all validated results, whether valid or not, to be returned to the agent for logging and analysis.
+    valid: bool
     reason: str | None = None
     normalized_args: dict[str, Any] | None = None
 
 
 @dataclass
 class AgentOutcome:
+    # This is the final outcome of the agent, after all steps have been taken.
+    # This will be passed into evaluation.
     stop_reason: StopReason
     final_message: str | None = None
     tool_results: list[ToolResult] = field(default_factory=list)
