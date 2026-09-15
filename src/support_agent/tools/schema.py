@@ -18,7 +18,6 @@ tools = [
                 }
             },
             "required": ["customer_id"],
-            "additionalProperties": False,
         },
     },
     {
@@ -37,7 +36,6 @@ tools = [
                 },
             },
             "required": ["query"],
-            "additionalProperties": False,
         },
     },
     {
@@ -56,7 +54,6 @@ tools = [
                 },
             },
             "required": ["customer_id", "reason"],
-            "additionalProperties": False,
         },
     },
     {
@@ -75,7 +72,6 @@ tools = [
                 },
             },
             "required": ["order_id", "amount"],
-            "additionalProperties": False,
         },
     },
     {
@@ -90,7 +86,6 @@ tools = [
                 }
             },
             "required": ["customer_id"],
-            "additionalProperties": False,
         },
     },
     {
@@ -114,7 +109,6 @@ tools = [
                 },
             },
             "required": ["customer_id", "summary", "priority"],
-            "additionalProperties": False,
         },
     },
 ]

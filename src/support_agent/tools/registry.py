@@ -36,8 +36,8 @@ class FunctionTool:
         try:
             result = self.fn(**kwargs)
         except TypeError as exc:
-            return ToolResult(tool_name=self.name, ok=False, error=str(exc))
-        return ToolResult(tool_name=self.name, ok=True, result=result)
+            return ToolResult(tool_name=self.name, valid=False, error=str(exc))
+        return ToolResult(tool_name=self.name, valid=True, result=result)
 
 
 def _function_tool(name: str, destructive: bool, fn: Callable[..., Any]) -> FunctionTool:
@@ -82,5 +82,5 @@ class ToolRegistry:
     def execute(self, call: ToolCall) -> ToolResult:
         tool = self.tools.get(call.name)
         if tool is None:
-            return ToolResult(tool_name=call.name, ok=False, error="unknown tool")
+            return ToolResult(tool_name=call.name, valid=False, error="unknown tool")
         return tool.invoke(**call.arguments)

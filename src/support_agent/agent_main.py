@@ -20,7 +20,7 @@ class LLMClient(Protocol):
 
 class PolicyValidator:
     def validate_tool_call(self, call: ToolCall) -> ValidationResult:
-        return ValidationResult(ok=True, normalized_args=call.arguments)
+        return ValidationResult(valid=True, normalized_args=call.arguments)
 
 
 class AgentLoop:
@@ -30,6 +30,7 @@ class AgentLoop:
         self.validator = validator
 
     def run(self, session: Session, user_message: str) -> AgentOutcome:
+        self._seed_identity(session)
         session.add_user_message(user_message)
         step_count = 0
 
@@ -50,7 +51,7 @@ class AgentLoop:
                 )
 
             validation = self.validator.validate_tool_call(tool_call)
-            if not validation.ok:
+            if not validation.valid:
                 return AgentOutcome(
                     stop_reason=StopReason.POLICY_BLOCK,
                     final_message=validation.reason or "tool call rejected",
@@ -60,7 +61,7 @@ class AgentLoop:
             tool_result = self.registry.execute(tool_call)
             session.add_tool_result(tool_result)
 
-            if tool_result.ok and tool_result.is_final:
+            if tool_result.valid and tool_result.is_final:
                 return AgentOutcome(
                     stop_reason=StopReason.RESOLVED,
                     final_message=str(tool_result.result),
@@ -82,6 +83,17 @@ class AgentLoop:
             stop_reason=StopReason.STEP_LIMIT,
             final_message="Agent hit the maximum step limit.",
             steps_taken=step_count,
+        )
+
+    def _seed_identity(self, session: Session) -> None:
+        """Puts the authenticated customer_id in front of the model on the
+        first turn of a session, so it can act on this customer without
+        asking them to restate who they are."""
+        if session.messages or not session.customer_id:
+            return
+        session.add_tool_message(
+            f"Authenticated session for customer_id={session.customer_id}.",
+            name="session_context",
         )
 
     def _extract_tool_call(self, decision: dict[str, Any]) -> ToolCall | None:
