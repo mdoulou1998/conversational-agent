@@ -4,7 +4,7 @@ and knowledge-base systems the brief says can be stubbed.
 Two customers, three orders, four KB chunks. order-1 and order-2 belong to
 cust-1; order-3 belongs to cust-2. That uneven split is deliberate: if a
 script has cust-2 try to refund order-1, that's the adversarial cross-customer
-refund case — an order that exists, just not for the customer asking.
+refund case - an order that exists, just not for the customer asking.
 """
 
 from dataclasses import dataclass

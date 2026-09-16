@@ -24,7 +24,7 @@ reviewer reading the code cold, not for feature count.
 - **Python 3.12.** Standard library first. `pydantic` for schemas, `pytest` for tests.
 - **Hand-rolled orchestration. No agent framework.** No LangChain, LlamaIndex, LangGraph,
   CrewAI, AutoGen. The loop is ours and must be readable end to end in one sitting.
-- **Model access via the Google Gen AI SDK (`google-genai`)**, behind our own interface —
+- **Model access via the Google Gen AI SDK (`google-genai`)**, behind our own interface -
   SDK types do not leak past `llm/gemini.py`.
 - **Everything external is stubbed**: knowledge base, account data, refunds, tickets.
   Stubs return realistic, deterministic fixtures. No vector DB, no HTTP, no database.
@@ -84,9 +84,9 @@ reviewer reading the code cold, not for feature count.
 **The seams that matter.** These are the three places the panel will poke, so keep them
 clean and injectable:
 
-1. `LLMClient` — swap Gemini for a scripted fake without touching the loop.
-2. `Tool` / `ToolRegistry` — the loop knows names and schemas, never implementations.
-3. `validation` — sits between "the model asked for this" and "we did this". Always.
+1. `LLMClient` - swap Gemini for a scripted fake without touching the loop.
+2. `Tool` / `ToolRegistry` - the loop knows names and schemas, never implementations.
+3. `validation` - sits between "the model asked for this" and "we did this". Always.
 
 Construct dependencies at the edge (`main.py` / test fixtures) and pass them in. No module
 imports a concrete LLM or tool implementation except the composition root.
@@ -116,11 +116,11 @@ imports a concrete LLM or tool implementation except the composition root.
 Quality is defined here as: **did the agent reach the correct terminal action without an
 unsafe side effect, and at what cost?** Score four things per case:
 
-- `outcome_correct` — right terminal action (resolve / act / escalate).
-- `action_safety` — zero unauthorised or out-of-policy destructive calls. Weighted hardest;
+- `outcome_correct` - right terminal action (resolve / act / escalate).
+- `action_safety` - zero unauthorised or out-of-policy destructive calls. Weighted hardest;
   this is the metric that would get a real deployment stopped.
-- `escalation_calibration` — escalated when it should, didn't when it shouldn't.
-- `efficiency` — steps and token cost to resolution.
+- `escalation_calibration` - escalated when it should, didn't when it shouldn't.
+- `efficiency` - steps and token cost to resolution.
 
 Cases run against `FakeLLM` scripts so they're deterministic and free. Include adversarial
 cases: prompt injection in a KB chunk, a refund for someone else's order, a
@@ -150,7 +150,7 @@ cover where practical.
 - Naming carries the design: `validate_tool_call`, `StopReason.policy_block`,
   `ToolSpec.destructive`. A reader should follow the flow from names alone.
 - Comments explain *why*. Delete any comment that explains *what*.
-- Prompts live in `prompts/` as text files, versioned, loaded by name — not f-strings
+- Prompts live in `prompts/` as text files, versioned, loaded by name - not f-strings
   scattered through the loop.
 - No `print`. Use `observability.py`.
 
@@ -166,14 +166,14 @@ Ship in this order and stop where time runs out. A working slice beats broad cov
 5. Real Gemini adapter behind a config flag.
 6. `docs/DESIGN.md` and `docs/DECISIONS.md` tidied for the walkthrough.
 
-## 9. Out of scope — do not build
+## 9. Out of scope - do not build
 
 Multi-tenancy, auth, a web UI or API layer, real retrieval or embeddings, streaming,
 async/concurrency, persistence beyond in-memory, Docker, CI config, retry/backoff
 infrastructure, a plugin system for tools.
 
 These are deliberate omissions, noted in `docs/DESIGN.md` as talking points. If you think
-one is genuinely needed, ask — don't add it quietly.
+one is genuinely needed, ask - don't add it quietly.
 
 ## 10. Commands
 

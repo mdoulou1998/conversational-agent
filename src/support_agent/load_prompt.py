@@ -2,7 +2,7 @@
 
 Prompts are plain text, not f-strings scattered through the loop or the LLM
 adapter. To change a prompt, add a new versioned file (e.g. system_v2.txt)
-and update the one call site that names it — the old version stays on disk.
+and update the one call site that names it - the old version stays on disk.
 """
 
 from __future__ import annotations

@@ -1,7 +1,7 @@
 """The agent loop: decide -> validate -> execute -> observe.
 
 Every exit is an AgentOutcome carrying a StopReason. Nothing here raises to
-end a run — an unknown tool, a bad arg, a blocked destructive call, a
+end a run - an unknown tool, a bad arg, a blocked destructive call, a
 repeated call, and running out of steps are all handled outcomes, not
 exceptions.
 """
