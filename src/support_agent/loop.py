@@ -71,6 +71,7 @@ class AgentLoop:
     def _handle_tool_call(
         self, session: Session, call: ToolCall, step: int, tool_results: list[ToolResult]
     ) -> AgentOutcome | None:
+        """Decide -> validate -> execute -> observe. Returns an AgentOutcome if the run should stop, else None."""
         validation = validate_tool_call(call, session, self.registry)
         logger.info("loop.validate step=%d tool=%s valid=%s", step, call.name, validation.valid)
         if not validation.valid:
