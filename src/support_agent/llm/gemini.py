@@ -9,8 +9,10 @@ from google.genai import types
 
 from support_agent.domain import Message, ToolCall
 from support_agent.llm.base import LLMDecision
+from support_agent.prompts import load_prompt
 
 _MODEL = "gemini-3.6-flash"
+_SYSTEM_PROMPT = "system_v1"
 _ROLE_MAP = {"user": "user", "assistant": "model", "tool": "user", "system": "user"}
 
 
@@ -20,6 +22,7 @@ class GeminiClient:
     def __init__(self, api_key: str | None = None, model: str = _MODEL) -> None:
         self._client = genai.Client(api_key=api_key or _load_api_key())
         self._model = model
+        self._system_instruction = load_prompt(_SYSTEM_PROMPT)
 
     def complete(self, messages: list[Message], tools: list[dict[str, Any]]) -> LLMDecision:
         contents = [
@@ -40,6 +43,7 @@ class GeminiClient:
             model=self._model,
             contents=contents,
             config=types.GenerateContentConfig(
+                system_instruction=self._system_instruction,
                 tools=[types.Tool(function_declarations=function_declarations)]
                 if function_declarations
                 else None,

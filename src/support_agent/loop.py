@@ -11,7 +11,7 @@ from __future__ import annotations
 import logging
 
 from support_agent.config import MAX_STEPS
-from support_agent.domain import AgentOutcome, StopReason, ToolCall
+from support_agent.domain import AgentOutcome, StopReason, ToolCall, ToolResult
 from support_agent.llm.base import LLMClient
 from support_agent.session import Session
 from support_agent.tools.registry import ToolRegistry
@@ -27,7 +27,9 @@ class AgentLoop:
 
     def run(self, session: Session, user_message: str) -> AgentOutcome:
         logger.info("loop.start customer_id=%s message=%r", session.customer_id, user_message)
+        self._seed_identity(session)
         session.add_user_message(user_message)
+        tool_results: list[ToolResult] = []
 
         for step in range(1, session.max_steps + 1):
             decision = self.llm.complete(session.messages, self.registry.schema())
@@ -37,7 +39,10 @@ class AgentLoop:
                 session.add_assistant_message(final_message)
                 logger.info("loop.resolved step=%d message=%r", step, final_message)
                 return AgentOutcome(
-                    stop_reason=StopReason.RESOLVED, final_message=final_message, steps_taken=step
+                    stop_reason=StopReason.RESOLVED,
+                    final_message=final_message,
+                    tool_results=tool_results,
+                    steps_taken=step,
                 )
 
             logger.info(
@@ -46,7 +51,7 @@ class AgentLoop:
                 decision.tool_call.name,
                 decision.tool_call.arguments,
             )
-            outcome = self._handle_tool_call(session, decision.tool_call, step)
+            outcome = self._handle_tool_call(session, decision.tool_call, step, tool_results)
             if outcome is not None:
                 logger.info(
                     "loop.stop step=%d reason=%s message=%r",
@@ -60,10 +65,13 @@ class AgentLoop:
         return AgentOutcome(
             stop_reason=StopReason.STEP_LIMIT,
             final_message="Reached the maximum number of steps without resolving.",
+            tool_results=tool_results,
             steps_taken=MAX_STEPS,
         )
 
-    def _handle_tool_call(self, session: Session, call: ToolCall, step: int) -> AgentOutcome | None:
+    def _handle_tool_call(
+        self, session: Session, call: ToolCall, step: int, tool_results: list[ToolResult]
+    ) -> AgentOutcome | None:
         validation = validate_tool_call(call, session, self.registry)
         logger.info("loop.validate step=%d tool=%s valid=%s", step, call.name, validation.valid)
         if not validation.valid:
@@ -73,6 +81,7 @@ class AgentLoop:
             return AgentOutcome(
                 stop_reason=StopReason.POLICY_BLOCK,
                 final_message=validation.reason or "tool call rejected",
+                tool_results=tool_results,
                 steps_taken=step,
             )
 
@@ -82,6 +91,7 @@ class AgentLoop:
                 stop_reason=StopReason.LOOP_DETECTED,
                 final_message="Detected a repeated tool call with identical arguments; "
                 "stopping rather than spinning.",
+                tool_results=tool_results,
                 steps_taken=step,
             )
 
@@ -92,6 +102,7 @@ class AgentLoop:
         )
         result = self.registry.execute(validated_call)
         session.add_tool_result(result)
+        tool_results.append(result)
         logger.info(
             "loop.execute step=%d tool=%s valid=%s escalated=%s",
             step,
@@ -104,7 +115,7 @@ class AgentLoop:
             return AgentOutcome(
                 stop_reason=StopReason.ESCALATED,
                 final_message="Escalated to a human.",
-                tool_results=[result],
+                tool_results=tool_results,
                 steps_taken=step,
             )
 
@@ -116,3 +127,15 @@ class AgentLoop:
             return True
         session.repeated_call_guard.append(signature)
         return False
+
+    def _seed_identity(self, session: Session) -> None:
+        """Puts the authenticated customer_id in front of the model on the
+        first turn of a session, so it can act on this customer without
+        asking them to restate who they are, and can ground a lookup call
+        against a real identity rather than trusting free text."""
+        if session.messages or not session.customer_id:
+            return
+        session.add_tool_message(
+            f"Authenticated session for customer_id={session.customer_id}.",
+            name="session_context",
+        )

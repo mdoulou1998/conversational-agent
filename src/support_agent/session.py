@@ -1,10 +1,11 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from support_agent.domain import Message, ToolResult
 from support_agent.config import MAX_STEPS
+from support_agent.domain import Message, ToolResult
 
 
 @dataclass
@@ -48,6 +49,11 @@ class Session:
 
     def add_tool_result(self, result: ToolResult) -> None:
         """
-        Adds a tool result to the session as a tool message.
+        Adds a tool result to the session as a tool message. Serialized as
+        JSON, not Python's dict repr, so the model can parse it reliably.
         """
-        self.add_tool_message(str(result.result or result.error or result.tool_name), name=result.tool_name)
+        if result.result is not None:
+            content = json.dumps(result.result, default=str)
+        else:
+            content = result.error or result.tool_name
+        self.add_tool_message(content, name=result.tool_name)
