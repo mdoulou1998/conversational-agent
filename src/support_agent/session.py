@@ -14,8 +14,9 @@ class Session:
     Represents a support agent session, persists across an entire conversation for a single customer
 
     """
+
     customer_id: str | None = None
-    messages: list[Message] = field(default_factory=list) # conversation history
+    messages: list[Message] = field(default_factory=list)  # conversation history
     max_steps: int = MAX_STEPS
     token_budget: int = 2000
     repeated_call_guard: list[tuple[str, tuple[tuple[str, Any], ...]]] = field(default_factory=list)
