@@ -15,6 +15,8 @@ def main() -> None:
     session = Session(customer_id="cust-1")
 
     outcome = loop.run(session, "I need to reset my password.")
+    for message in session.messages:
+            print(f"[{message.role}] {message.content}")
     print(outcome)
 
 
