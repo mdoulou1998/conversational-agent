@@ -121,6 +121,9 @@ class AgentLoop:
         return None
 
     def _is_repeat(self, session: Session, call: ToolCall) -> bool:
+        """Flags identical tool + args seen before in this session as a loop,
+        not progress, so the run can stop instead of spinning on a model
+        that keeps retrying the same failed or already-satisfied call."""
         signature = (call.name, tuple(sorted(call.arguments.items())))
         if signature in session.repeated_call_guard:
             return True
