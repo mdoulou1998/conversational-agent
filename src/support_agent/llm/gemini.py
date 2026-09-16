@@ -7,22 +7,21 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
+from support_agent import config
 from support_agent.domain import Message, ToolCall
 from support_agent.llm.base import LLMDecision
 from support_agent.prompts import load_prompt
 
-_MODEL = "gemini-3.6-flash"
-_SYSTEM_PROMPT = "system_v1"
 _ROLE_MAP = {"user": "user", "assistant": "model", "tool": "user", "system": "user"}
 
 
 class GeminiClient:
     """LLMClient backed by the Gemini API. No google.genai type crosses this module's boundary."""
 
-    def __init__(self, api_key: str | None = None, model: str = _MODEL) -> None:
+    def __init__(self, api_key: str | None = None, model: str = config.GEMINI_MODEL) -> None:
         self._client = genai.Client(api_key=api_key or _load_api_key())
         self._model = model
-        self._system_instruction = load_prompt(_SYSTEM_PROMPT)
+        self._system_instruction = load_prompt(config.GEMINI_SYSTEM_PROMPT)
 
     def complete(self, messages: list[Message], tools: list[dict[str, Any]]) -> LLMDecision:
         contents = [
