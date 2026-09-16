@@ -28,7 +28,7 @@ reviewer reading the code cold, not for feature count.
   SDK types do not leak past `llm/gemini.py`.
 - **Everything external is stubbed**: knowledge base, account data, refunds, tickets.
   Stubs return realistic, deterministic fixtures. No vector DB, no HTTP, no database.
-- **Build budget is two days.** Ask before anything that costs more than an hour.
+- **Build budget is around two days.** Ask before anything that costs more than an hour.
 - **No new dependency without asking.** Name the alternative you rejected.
 
 ## 3. Architecture
@@ -138,7 +138,7 @@ cover where practical.
 - **Log decisions.** Any non-obvious choice gets one line in `docs/DECISIONS.md`: decision,
   reason, rejected alternative. I need to defend these live.
 - **Explain new territory.** I'm strong in Python, cloud and CI/CD, and newer to agent
-  orchestration and LLM evaluation. When the choice is in that second bucket, explain the
+  orchestration. When the choice is in that second bucket, explain the
   reasoning, not just the code.
 
 ## 7. Code conventions
@@ -160,8 +160,8 @@ Ship in this order and stop where time runs out. A working slice beats broad cov
 
 1. `domain.py`, `tools/`, `registry`, `FakeLLM`, `loop.py` with termination. End-to-end on
    a stub run.
-2. `policy/validation.py` + tests, including the adversarial refund case.
-3. `session.py` multi-turn + follow-up reference test.
+2. `session.py` multi-turn + follow-up reference test.
+3. `policy/validation.py` + tests, including the adversarial refund case.
 4. `evals/` harness with 8–12 labelled cases and a printed scorecard.
 5. Real Gemini adapter behind a config flag.
 6. `docs/DESIGN.md` and `docs/DECISIONS.md` tidied for the walkthrough.
