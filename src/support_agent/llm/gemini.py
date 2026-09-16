@@ -10,7 +10,7 @@ from google.genai import types
 from support_agent import config
 from support_agent.domain import Message, ToolCall
 from support_agent.llm.base import LLMDecision
-from support_agent.prompts import load_prompt
+from support_agent.load_prompt import load_prompt
 
 _ROLE_MAP = {"user": "user", "assistant": "model", "tool": "user", "system": "user"}
 
