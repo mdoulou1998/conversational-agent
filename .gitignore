@@ -218,4 +218,5 @@ __marimo__/
 .streamlit/secrets.toml
 
 AI-Native-Conversational-Agent-Candidate-Brief-Multiverse (1).pdf
-scaffold/
+makefile
+pre-commit-config.yaml
