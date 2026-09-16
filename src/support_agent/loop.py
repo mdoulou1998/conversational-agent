@@ -29,44 +29,52 @@ class AgentLoop:
         self._seed_identity(session)
         session.add_user_message(user_message)
         tool_results: list[ToolResult] = []
+        try:
+            for step in range(1, session.max_steps + 1):
+                decision = self.llm.complete(session.messages, self.registry.schema())
 
-        for step in range(1, session.max_steps + 1):
-            decision = self.llm.complete(session.messages, self.registry.schema())
+                if decision.tool_call is None:
+                    final_message = decision.final_message or ""
+                    session.add_assistant_message(final_message)
+                    logger.info("loop.resolved step=%d message=%r", step, final_message)
+                    return AgentOutcome(
+                        stop_reason=StopReason.RESOLVED,
+                        final_message=final_message,
+                        tool_results=tool_results,
+                        steps_taken=step,
+                    )
 
-            if decision.tool_call is None:
-                final_message = decision.final_message or ""
-                session.add_assistant_message(final_message)
-                logger.info("loop.resolved step=%d message=%r", step, final_message)
-                return AgentOutcome(
-                    stop_reason=StopReason.RESOLVED,
-                    final_message=final_message,
-                    tool_results=tool_results,
-                    steps_taken=step,
-                )
-
-            logger.info(
-                "loop.decide step=%d tool=%s args=%s",
-                step,
-                decision.tool_call.name,
-                decision.tool_call.arguments,
-            )
-            outcome = self._handle_tool_call(session, decision.tool_call, step, tool_results)
-            if outcome is not None:
                 logger.info(
-                    "loop.stop step=%d reason=%s message=%r",
+                    "loop.decide step=%d tool=%s args=%s",
                     step,
-                    outcome.stop_reason.value,
-                    outcome.final_message,
+                    decision.tool_call.name,
+                    decision.tool_call.arguments,
                 )
-                return outcome
+                outcome = self._handle_tool_call(session, decision.tool_call, step, tool_results)
+                if outcome is not None:
+                    logger.info(
+                        "loop.stop step=%d reason=%s message=%r",
+                        step,
+                        outcome.stop_reason.value,
+                        outcome.final_message,
+                    )
+                    return outcome
 
-        logger.warning("loop.step_limit steps=%d", session.max_steps)
-        return AgentOutcome(
-            stop_reason=StopReason.STEP_LIMIT,
-            final_message="Reached the maximum number of steps without resolving.",
-            tool_results=tool_results,
-            steps_taken=session.max_steps,
-        )
+            logger.warning("loop.step_limit steps=%d", session.max_steps)
+            return AgentOutcome(
+                stop_reason=StopReason.STEP_LIMIT,
+                final_message="Reached the maximum number of steps without resolving.",
+                tool_results=tool_results,
+                steps_taken=session.max_steps,
+            )
+        except Exception as e:
+            logger.exception("loop.exception: %s", e)
+            return AgentOutcome(
+                stop_reason=StopReason.EXCEPTION,
+                final_message=f"An unexpected error occurred: {e}",
+                tool_results=tool_results,
+                steps_taken=len(tool_results),
+            )
 
     def _handle_tool_call(
         self, session: Session, call: ToolCall, step: int, tool_results: list[ToolResult]
