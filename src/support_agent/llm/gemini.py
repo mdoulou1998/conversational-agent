@@ -12,7 +12,7 @@ from support_agent.domain import Message, ToolCall
 from support_agent.llm.base import LLMDecision
 from support_agent.load_prompt import load_prompt
 
-_ROLE_MAP = {"user": "user", "assistant": "model", "tool": "user", "system": "user"}
+_ROLE_MAP = {"user": "user", "assistant": "model", "tool": "user"}
 
 
 class GeminiClient:
