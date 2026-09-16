@@ -10,7 +10,6 @@ from __future__ import annotations
 
 import logging
 
-from support_agent.config import MAX_STEPS
 from support_agent.domain import AgentOutcome, StopReason, ToolCall, ToolResult
 from support_agent.llm.base import LLMClient
 from support_agent.session import Session
@@ -61,12 +60,12 @@ class AgentLoop:
                 )
                 return outcome
 
-        logger.warning("loop.step_limit steps=%d", MAX_STEPS)
+        logger.warning("loop.step_limit steps=%d", session.max_steps)
         return AgentOutcome(
             stop_reason=StopReason.STEP_LIMIT,
             final_message="Reached the maximum number of steps without resolving.",
             tool_results=tool_results,
-            steps_taken=MAX_STEPS,
+            steps_taken=session.max_steps,
         )
 
     def _handle_tool_call(

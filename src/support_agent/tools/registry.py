@@ -17,6 +17,7 @@ class Tool(Protocol):
     name: str
     description: str
     destructive: bool
+    escalates: bool
     parameters: dict[str, Any]
 
     def invoke(self, **kwargs: Any) -> ToolResult: ...
@@ -29,6 +30,7 @@ class FunctionTool:
     name: str
     description: str
     destructive: bool
+    escalates: bool
     parameters: dict[str, Any]
     fn: Callable[..., Any]
 
@@ -40,12 +42,15 @@ class FunctionTool:
         return ToolResult(tool_name=self.name, valid=True, result=result)
 
 
-def _function_tool(name: str, destructive: bool, fn: Callable[..., Any]) -> FunctionTool:
+def _function_tool(
+    name: str, destructive: bool, fn: Callable[..., Any], escalates: bool = False
+) -> FunctionTool:
     schema = _SCHEMA_BY_NAME[name]
     return FunctionTool(
         name=name,
         description=schema["description"],
         destructive=destructive,
+        escalates=escalates,
         parameters=schema["parameters"],
         fn=fn,
     )
@@ -56,7 +61,9 @@ TOOLS: dict[str, Tool] = {
         "lookup_customer_order", destructive=False, fn=account_lookup
     ),
     "search_kb": _function_tool("search_kb", destructive=False, fn=kb_search),
-    "escalate_case": _function_tool("escalate_case", destructive=False, fn=escalate_case),
+    "escalate_case": _function_tool(
+        "escalate_case", destructive=False, fn=escalate_case, escalates=True
+    ),
     "issue_refund": _function_tool("issue_refund", destructive=True, fn=issue_refund),
     "reset_password": _function_tool("reset_password", destructive=True, fn=reset_password),
     "create_support_ticket": _function_tool(
@@ -83,4 +90,7 @@ class ToolRegistry:
         tool = self.tools.get(call.name)
         if tool is None:
             return ToolResult(tool_name=call.name, valid=False, error="unknown tool")
-        return tool.invoke(**call.arguments)
+        result = tool.invoke(**call.arguments)
+        if tool.escalates and result.valid:
+            result.escalated = True
+        return result
