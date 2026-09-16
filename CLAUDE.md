@@ -34,34 +34,51 @@ reviewer reading the code cold, not for feature count.
 ## 3. Architecture
 
 ```
-src/support_agent/
-  config.py            # settings: model name, caps, budgets. No magic numbers elsewhere.
-  domain.py            # Message, ToolCall, ToolResult, AgentOutcome, StopReason
-  session.py           # multi-turn conversation state + history assembly
-  loop.py              # the agent loop: decide -> validate -> execute -> observe
-  llm/
-    base.py            # LLMClient protocol: complete(messages, tools) -> LLMDecision
-    gemini.py          # google-genai adapter
-    fake.py            # scripted, deterministic client for tests and evals
-  tools/
-    base.py            # Tool protocol, ToolSpec (name, schema, read_only | destructive)
-    registry.py        # name -> Tool; exports JSON schema for the LLM
-    knowledge.py       # kb_search(query, k)
-    account.py         # account_lookup(customer_id)
-    actions.py         # issue_refund, reset_password, create_ticket
-    escalation.py      # escalate_to_human(reason)
-  policy/
-    validation.py      # validate a proposed tool call before it executes
-    rules.py           # refund caps, order ownership, idempotency
-  evals/
-    cases.py           # labelled scenarios
-    harness.py         # run cases, produce a scorecard
-    metrics.py         # scoring functions
-  observability.py     # structured events, step/token/cost counters
-tests/
-docs/
-  DESIGN.md            # one page: problem, shape, what's deliberately missing
-  DECISIONS.md         # ADR-lite, newest last
+├── AI-Native-Conversational-Agent-Candidate-Brief-Multiverse (1).pdf
+├── CLAUDE.md
+├── README.md
+├── docs       # Add any design docs and decisions                 
+├── mypy.ini
+├── prompts
+│   └── system_v1.txt
+├── pyproject.toml
+├── ruff.toml
+├── src
+│   ├── support_agent
+│   │   ├── __init__.py
+│   │   ├── config.py    # settings: model name, caps, budgets. No magic numbers elsewhere.
+│   │   ├── domain.py.   # Message, ToolCall, ToolResult, AgentOutcome, StopReason
+│   │   ├── eval
+│   │   │   ├── cases.py
+│   │   │   └── metrics.py
+│   │   ├── llm
+│   │   │   ├── base.py.    # LLMClient protocol: complete(messages, tools) -> LLMDecision
+│   │   │   ├── fake.py     # scripted, deterministic client for tests and evals
+│   │   │   └── gemini.py.  # google-genai adapter
+│   │   ├── loop.py         # the agent loop: decide -> validate -> execute -> observe
+│   │   ├── main.py
+│   │   ├── prompts.py
+│   │   ├── session.py      # multi-turn conversation state + history assembly
+│   │   ├── tools
+│   │   │   ├── account_lookup.py.  # Account lookup on customer id
+│   │   │   ├── actions.py          # issue_refund, reset_password, create_ticket  
+│   │   │   ├── escalate.py         # Escalate to human
+│   │   │   ├── fixtures.py         # Dummy customer data
+│   │   │   ├── kb_search.py        # Top k chunks lookup
+│   │   │   ├── registry.py          name -> Tool; exports JSON schema for the LLM
+│   │   │   └── schema.py           # Shapes tool registry schema for llm
+│   │   └── validate
+│   │       └── validation.py.       # validate a proposed tool call before it executes
+│   └── support_agent.egg-info
+│       ├── PKG-INFO
+│       ├── SOURCES.txt
+│       ├── dependency_links.txt
+│       ├── requires.txt
+│       └── top_level.txt
+├── tests
+│   ├── test_loop.py
+│   └── test_session.py
+└── uv.lock
 ```
 
 **The seams that matter.** These are the three places the panel will poke, so keep them
