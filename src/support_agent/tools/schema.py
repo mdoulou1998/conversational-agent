@@ -1,8 +1,5 @@
 """Tool schemas in the shape ToolRegistry.schema() hands to the LLM:
 {"name", "description", "parameters"} per tool, no provider-specific wrapper.
-
-Names and descriptions mirror the TOOLS registry in agent_main.py so there is
-one description of what the model sees, not two that can drift apart.
 """
 
 tools = [
